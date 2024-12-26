@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"file_mgmt_system/helper"
 	"file_mgmt_system/internal/models"
 	"file_mgmt_system/internal/service"
 	"net/http"
@@ -23,15 +24,6 @@ func (handler *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-	// 	http.Error(w, "Invalid input", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// if req.FileName == "" || req.FileType == "" || req.FileSize <= 0 || req.Email == "" {
-	// 	http.Error(w, "Invalid input", http.StatusBadRequest)
-	// 	return
-	// }
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "Failed to read file: "+err.Error(), http.StatusBadRequest)
@@ -39,10 +31,14 @@ func (handler *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	defer file.Close()
 
-	email := r.FormValue("email")
-	if email == "" {
-		writeErrorResponse(w, "Email is required", "ERR_MISSING_EMAIL", http.StatusBadRequest)
-		return
+	email, ok := helper.GetEmailFromContext(r.Context())
+
+	if !ok {
+		email := r.FormValue("email")
+		if email == "" {
+			writeErrorResponse(w, "Email is required", "ERR_MISSING_EMAIL", http.StatusBadRequest)
+			return
+		}
 	}
 	req := models.UploadRequest{
 		FileName: header.Filename,
@@ -62,7 +58,6 @@ func (handler *UploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		"file":   fileMetadata,
 	}
 	writeJSONResponse(w, response, http.StatusOK)
-	// fmt.Fprintf(w, "File %s uploaded successfully", header.Filename)
 }
 
 func writeErrorResponse(w http.ResponseWriter, message, code string, status int) {

@@ -70,11 +70,11 @@ func main() {
 	// ------------
 	// router := handlers.NewRouter(ociStorage, db.Conn)
 	corsRouter := middleware.CORS(router)
-	// cookiesRouter := middleware.CookieMiddleware(corsRouter)
+	cookiesRouter := middleware.CookieMiddleware(corsRouter)
 
 	// -------
 	fmt.Println("Server is running on :8081")
-	err = http.ListenAndServe("localhost:8081", corsRouter)
+	err = http.ListenAndServe("localhost:8081", cookiesRouter)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

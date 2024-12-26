@@ -14,7 +14,7 @@ import (
 
 type contextKey string
 
-const userKey contextKey = "user"
+const UserKey contextKey = "user"
 
 // Define a secret key for JWT signing (keep this secure in production)
 var jwtSecret = []byte("KA11EL4943")
@@ -53,7 +53,7 @@ func CookieMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Store the user email in the request context
-		ctx := context.WithValue(r.Context(), userKey, userEmail)
+		ctx := context.WithValue(r.Context(), UserKey, userEmail)
 
 		// Pass the updated request to the next handler
 		next.ServeHTTP(w, r.WithContext(ctx))
