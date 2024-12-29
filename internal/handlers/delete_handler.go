@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"file_mgmt_system/internal/storage"
+	"encoding/json"
+	"file_mgmt_system/internal/service"
 	"fmt"
 	"net/http"
 
@@ -9,48 +10,58 @@ import (
 )
 
 type DeleteHandler struct {
-	Storage storage.Storage
+	Service *service.DeleteService
 	// Producer *kafka.KafkaProducer
 }
 
-func NewDeleteHandler(s storage.Storage) *DeleteHandler {
+func NewDeleteHandler(service *service.DeleteService) *DeleteHandler {
 	return &DeleteHandler{
-		Storage: s,
+		Service: service,
 		// Producer: producer,
 	}
 }
 
+type DeleteResponse struct {
+	Success  bool   `json:"success"`
+	FileName string `json:"fileName,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
 func (h *DeleteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(DeleteResponse{
+			Success: false,
+			Message: "Invalid request method",
+		})
 		return
 	}
+
 	vars := mux.Vars(r)
-	// objectName := r.URL.Query().Get("name")
-	objectName := vars["name"]
-	if objectName == "" {
-		http.Error(w, "File name is required", http.StatusBadRequest)
+	fileID, ok := vars["fileID"]
+	if !ok || fileID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DeleteResponse{
+			Success: false,
+			Message: "fileID is required in the path",
+		})
 		return
 	}
 
-	err := h.Storage.DeleteFile(objectName)
+	fileName, err := h.Service.Delete(fileID)
 	if err != nil {
-		http.Error(w, "Failed to delete file: "+err.Error(), http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(DeleteResponse{
+			Success: false,
+			Message: "Failed to delete file: " + err.Error(),
+		})
 		return
 	}
-	// message := map[string]string{
-	// 	"event":   "file_deleted",
-	// 	"file_id": objectName,
-	// }
-	// messageBytes, _ := json.Marshal(message)
 
-	// err = h.Producer.SendMessage(objectName, string(messageBytes))
-	// if err != nil {
-	// 	http.Error(w, "Failed to send Kafka message", http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// fmt.Fprintf(w, "File %s deleted successfully", objectName)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("File %s deleted successfully", objectName)))
+	json.NewEncoder(w).Encode(DeleteResponse{
+		Success:  true,
+		FileName: fileName,
+		Message:  fmt.Sprintf("File %s deleted successfully", fileName),
+	})
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"file_mgmt_system/internal/models"
 	"file_mgmt_system/internal/storage"
+	"log"
 )
 
 type LoginService struct {
@@ -15,11 +16,12 @@ func NewLoginService(db *storage.DB) *LoginService {
 	}
 }
 
-func (s *LoginService) Login(req *models.Input) (bool, error) {
+func (s *LoginService) Login(req *models.Input) (int, bool, error) {
 
-	affectedRows, err := s.db.InsertUser(req)
+	affectedRows, fileExists, err := s.db.InsertUser(req)
 	if err != nil {
-		return false, err
+		return 0, false, err
 	}
-	return affectedRows > 0, nil
+	log.Println(affectedRows)
+	return affectedRows, fileExists, nil
 }

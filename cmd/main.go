@@ -58,7 +58,8 @@ func main() {
 
 	loginService := service.NewLoginService(db)
 	loginHandler := handlers.NewLoginHandler(loginService)
-	router.Handle("/storePIDetails", loginHandler).Methods("POST")
+	router.Handle("/storePIDetails", http.HandlerFunc(loginHandler.ServeHTTP)).Methods("POST")
+	router.Handle("/getEmail", http.HandlerFunc(loginHandler.GetEmail)).Methods("GET")
 
 	uploadService := service.NewUploadService(db, ociStorage)
 	uploadHandler := handlers.NewUploadHandler(uploadService)
@@ -67,6 +68,15 @@ func main() {
 	getFileList := service.NewGetFilesService(db)
 	getFileListHandler := handlers.NewGetFilesHandler(getFileList)
 	router.Handle("/getUploadedFiles/{email}", getFileListHandler).Methods("GET")
+
+	deleteService := service.NewDeleteService(db, ociStorage)
+	deleteHandler := handlers.NewDeleteHandler(deleteService)
+	router.Handle("/deleteFile/{fileID}", deleteHandler).Methods("DELETE")
+
+	downloadService := service.NewDownloadService(db, ociStorage)
+	downloadHandler := handlers.NewDownloadHandler(downloadService)
+	router.Handle("/downloadFile/{fileID}", downloadHandler)
+
 	// ------------
 	// router := handlers.NewRouter(ociStorage, db.Conn)
 	corsRouter := middleware.CORS(router)

@@ -25,3 +25,8 @@ type FileMetadata struct {
 	OCIReference string
 	FileID       string
 }
+
+type FileName struct {
+	FileName    string
+	OCIFileName string
+}

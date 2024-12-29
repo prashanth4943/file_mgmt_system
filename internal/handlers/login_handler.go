@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"file_mgmt_system/helper"
 	"file_mgmt_system/internal/models"
 	"file_mgmt_system/internal/service"
 	"file_mgmt_system/middleware"
@@ -24,8 +25,10 @@ func NewLoginHandler(service *service.LoginService) *LoginHandler {
 }
 
 type Response struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Success      bool   `json:"success"`
+	Message      string `json:"message"`
+	FileExists   bool   `json:"fileExists"`
+	RowsAffected int    `json:"rowsAffected"`
 }
 
 func (handler *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -48,12 +51,13 @@ func (handler *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
-	// res := service.Login_service(&req)
-	success, err := handler.service.Login(&req)
+	success := false
+	rowsAffected, fileExists, err := handler.service.Login(&req)
 	if err != nil {
 		http.Error(w, "Failed to process login", http.StatusInternalServerError)
 		return
 	}
+	success = true
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
 		Value:    tokenString,
@@ -65,7 +69,37 @@ func (handler *LoginHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
-		Success: success,
-		Message: "Login successful",
+		Success:      success,
+		Message:      "Login successful",
+		FileExists:   fileExists,
+		RowsAffected: rowsAffected,
 	})
+}
+
+func (handler *LoginHandler) GetEmail(w http.ResponseWriter, r *http.Request) {
+
+	type Response struct {
+		Success bool   `json:"success"`
+		Message string `json:"message,omitempty"`
+		Email   string `json:"email,omitempty"` // Omits the field if empty
+	}
+	email, ok := helper.GetEmailFromContext(r.Context())
+	if !ok {
+		response := Response{
+			Success: false,
+			Message: "error while fetching email",
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	response := Response{
+		Success: true,
+		Email:   email,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+
 }

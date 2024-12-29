@@ -1,17 +1,21 @@
 package handlers
 
 import (
-	"file_mgmt_system/internal/storage"
+	"file_mgmt_system/internal/service"
 	"io"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type DownloadHandler struct {
-	Storage storage.Storage
+	Service *service.DownloadService
 }
 
-func NewDownloadHandler(s storage.Storage) *DownloadHandler {
-	return &DownloadHandler{Storage: s}
+func NewDownloadHandler(service *service.DownloadService) *DownloadHandler {
+	return &DownloadHandler{
+		Service: service,
+	}
 }
 
 func (h *DownloadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -20,19 +24,27 @@ func (h *DownloadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	objectName := r.URL.Query().Get("name")
-	if objectName == "" {
-		http.Error(w, "File name is required", http.StatusBadRequest)
+	vars := mux.Vars(r)
+	fileID, ok := vars["fileID"]
+	if !ok || fileID == "" {
+		http.Error(w, "fileID is required in the path", http.StatusBadRequest)
 		return
 	}
 
-	reader, err := h.Storage.DownloadFile(objectName)
+	fileName, fileStream, err := h.Service.Download(fileID)
 	if err != nil {
 		http.Error(w, "Failed to download file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// defer fileStream.Close()
 
-	w.Header().Set("Content-Disposition", "attachment; filename="+objectName)
+	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
+	// w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
+	// w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
-	io.Copy(w, reader)
+	// io.Copy(w, reader)
+	_, err = io.Copy(w, fileStream)
+	if err != nil {
+		http.Error(w, "Failed to send file: "+err.Error(), http.StatusInternalServerError)
+	}
 }
