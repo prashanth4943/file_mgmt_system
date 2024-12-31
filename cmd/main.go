@@ -37,6 +37,18 @@ func main() {
 	defer db.Conn.Close()
 
 	//----------
+
+	redisAddr := "127.0.0.1:6379"
+	redisPassword := ""
+	redisDB := 0
+
+	redisClient, err := storage.NewRedisClient(redisAddr, redisPassword, redisDB)
+	if err != nil {
+		log.Fatalf("Error initializing Redis: %v", err)
+	}
+	defer redisClient.Close()
+
+	// -------------
 	brokers := []string{"localhost:9092"}
 	topic := "file-events"
 	groupID := "file-mgmt-group"
@@ -65,6 +77,12 @@ func main() {
 	uploadHandler := handlers.NewUploadHandler(uploadService)
 	router.Handle("/upload", uploadHandler).Methods("POST")
 
+	downloadService := service.NewDownloadService(db, ociStorage, redisClient)
+	downloadHandler := handlers.NewDownloadHandler(downloadService)
+	router.Handle("/downloadFile/{fileID}", http.HandlerFunc(downloadHandler.ServeHTTP)).Methods("GET")
+	router.Handle("/getThumbnail/{fileName}", http.HandlerFunc(downloadHandler.GetThumbnail)).Methods("GET")
+	router.Handle("/getPreview/{fileID}", http.HandlerFunc(downloadHandler.GetPreview)).Methods("GET")
+
 	getFileList := service.NewGetFilesService(db)
 	getFileListHandler := handlers.NewGetFilesHandler(getFileList)
 	router.Handle("/getUploadedFiles/{email}", getFileListHandler).Methods("GET")
@@ -72,10 +90,6 @@ func main() {
 	deleteService := service.NewDeleteService(db, ociStorage)
 	deleteHandler := handlers.NewDeleteHandler(deleteService)
 	router.Handle("/deleteFile/{fileID}", deleteHandler).Methods("DELETE")
-
-	downloadService := service.NewDownloadService(db, ociStorage)
-	downloadHandler := handlers.NewDownloadHandler(downloadService)
-	router.Handle("/downloadFile/{fileID}", downloadHandler)
 
 	// ------------
 	// router := handlers.NewRouter(ociStorage, db.Conn)

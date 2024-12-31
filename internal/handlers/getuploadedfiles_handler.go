@@ -29,7 +29,7 @@ func (handler *GetFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	files, err := handler.service.GetUploadedFilesByEmail(email)
+	enrichedFiles, err := handler.service.GetUploadedFilesByEmail(email)
 	if err != nil {
 		http.Error(w, "Failed to fetch uploaded files: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -37,5 +37,6 @@ func (handler *GetFilesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(files)
+	// json.NewEncoder(w).Encode(files)
+	json.NewEncoder(w).Encode(enrichedFiles)
 }

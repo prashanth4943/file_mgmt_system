@@ -30,3 +30,9 @@ type FileName struct {
 	FileName    string
 	OCIFileName string
 }
+
+type EnrichedFile struct {
+	FileMetadata FileMetadata `json:"metadata"`
+	FileContent  []byte       `json:"fileContent"`
+	FileName     string       `json:"fileName,omitempty"`
+}
